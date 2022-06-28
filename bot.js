@@ -22,7 +22,12 @@ class DentaBot extends ActivityHandler {
             const qnaResults = await this.QnAMaker.getAnswers(context);
             const LuisResult = await this.intentRecognizer.executeLuisQuery(context);
 
-            if (LuisResult.luisResult.prediction.topIntent === "getAvailability" &&
+            // If an answer was received from QnA Maker, send the answer back to the user.
+            if (qnaResults[0]) {
+                await context.sendActivity(`${qnaResults[0].answer}`);
+            }
+
+            else if (LuisResult.luisResult.prediction.topIntent === "getAvailability" &&
                 LuisResult.intents.getAvailability.score > .6 &&
                 LuisResult.entities.$instance
             ) {
@@ -41,14 +46,14 @@ class DentaBot extends ActivityHandler {
                         await context.sendActivity(getAvaiTimeRange);
                     }
                 else{
-                    const reply = "Please provide a more specific date or time which you need to know for us to check";
-                    await context.sendActivity(reply);
+                    let getAvaiTimeRange = await this.scheduler.getAvailability();
+                    await context.sendActivity(getAvaiTimeRange);
                 }
                 await next();
                 return;
             }
 
-            if (LuisResult.luisResult.prediction.topIntent === "scheduleAppointment" &&
+            else if (LuisResult.luisResult.prediction.topIntent === "scheduleAppointment" &&
                 LuisResult.intents.scheduleAppointment.score > .6 &&
                 LuisResult.entities.$instance
             ) {
@@ -70,11 +75,6 @@ class DentaBot extends ActivityHandler {
                 }
                 await next();
                 return;
-            }
-
-            // If an answer was received from QnA Maker, send the answer back to the user.
-            if (qnaResults[0]) {
-                await context.sendActivity(`${qnaResults[0].answer}`);
             }
             else {
                 // If no answers were returned from QnA Maker, reply with help.
